@@ -1,12 +1,32 @@
 # From Individuals to Communities: Community-Aware Language Modeling for the Detection of Hate Speech
 
+This repository is part of our group's The Tide: racist and abusive trends in online communities project. 
+
+If you use this code or data please cite:
+@inproceedings{arviv2020s,
+  title={It's a Thin Line Between Love and Hate: Using the Echo in Modeling Dynamics of Racist Online Communities},
+  author={Arviv, Eyal and Hanouna, Simo and Tsur, Oren},
+  booktitle={Proceedings of the Fifteenth International AAAI Conference on Web and Social Media},
+  year={2021}
+} 
+The paper is avaliable at: https://arxiv.org/abs/2012.01133
+Lab page: https://www.naslab.ise.bgu.ac.il/
+
+
+## Data
+The annotated datasets used for training and testing the algorithms are available under `data`.
+The raw unlabeled dataset is available at: https://www.dropbox.com/s/f9y0d6u5sjrbemd/echo_share.tar.gz?dl=0 (4.1GB)
+
+
+## Code
+
 To avoid environment issues you can create a new conda env using the following line:
 
 `conda create --name <env> --file requirements.txt`
 
-This project is divided into two main segments:
+This project contains two main code segments:
 1. Hate Speech Detection - under the module `detection`
-1. Hate Networks - under the model `hate_networks`
+2. Hate Networks - under the model `hate_networks`
 
 
 ## Hate Speech Detection
