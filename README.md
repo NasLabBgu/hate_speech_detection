@@ -3,13 +3,16 @@
 This repository is part of our group's The Tide: racist and abusive trends in online communities project. 
 
 If you use this code or data please cite:
-@inproceedings{arviv2020s,
-  title={It's a Thin Line Between Love and Hate: Using the Echo in Modeling Dynamics of Racist Online Communities},
-  author={Arviv, Eyal and Hanouna, Simo and Tsur, Oren},
-  booktitle={Proceedings of the Fifteenth International AAAI Conference on Web and Social Media},
-  year={2021}
-} 
+
+> @inproceedings{arviv2020s,  
+>  title={It's a Thin Line Between Love and Hate: Using the Echo in Modeling Dynamics of Racist Online Communities},  
+>  author={Arviv, Eyal and Hanouna, Simo and Tsur, Oren},  
+>  booktitle={Proceedings of the Fifteenth International AAAI Conference on Web and Social Media (ICWSM)},  
+>  year={2021},  
+> }.  
+
 The paper is avaliable at: https://arxiv.org/abs/2012.01133
+
 Lab page: https://www.naslab.ise.bgu.ac.il/
 
 
