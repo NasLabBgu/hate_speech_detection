@@ -285,7 +285,6 @@ def compute_communities_feautres(g):
     logger.info(f"There are {lcc_intersection_r_n} mutual nodes between LCC and R+N")
 
 
-
 def compute_network_features(g, edge_type, keep_all_edges, keep_all_nodes, base_path):
     """
         Given an edge df and users with their topic model and word2vec clusters df, create two directed igraph graphs where
@@ -387,6 +386,7 @@ def construct_network(K, nodes_dict, users_dist_df, min_edge_weight, cluster_nam
         visual_style["edge_width"] = 2
         visual_style["edge_curved"] = False
     return g, visual_style
+
 
 def create_network(edge_type, users_dist_df, K, min_edge_weight=3, layout_type="fr", with_labels=False,
                    output_fig_names=None, base_path=None):

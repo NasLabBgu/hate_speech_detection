@@ -108,7 +108,7 @@ class NeuralNetworkModel(BaseModel):
         else:
             y_train_for_class_weight = y_train.copy()
         class_weights = compute_class_weight(
-            "balanced", np.unique(y_train_for_class_weight), list(y_train_for_class_weight)
+            class_weight="balanced", classes=np.unique(y_train_for_class_weight), y=list(y_train_for_class_weight)
         )
         train_class_weights = dict(zip(np.unique(y_train_for_class_weight), class_weights))
         print(f"Using GPU: {tf.config.list_physical_devices('GPU')}")

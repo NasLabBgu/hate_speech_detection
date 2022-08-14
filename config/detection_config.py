@@ -6,7 +6,7 @@ post_level_execution_config = {
     # set multiple_experiments to False when running post_level__experiment.py file.
     # set multiple_experiments to True when running the file post_level__multiple_experiments.py.
     "data": {
-        "dataset": "echo_2",  # possible values: ["echo_2", "gab,"waseem_2", "waseem_3", "davidson_2", "davidson_3"]
+        "dataset": "gab",  # possible values: ["echo_2", "gab,"waseem_2", "waseem_3", "davidson_2", "davidson_3"]
         'test_size': 0.2
     },
     "train_on_all_data": False,
@@ -57,8 +57,8 @@ post_level_execution_config = {
 
 # user level execution config
 user_level_execution_config = {
-    "trained_data": "echo_2",
-    "inference_data": "echo_2"
+    "trained_data": "gab",
+    "inference_data": "gab"
 }
 
 # configs specific to posts with/wo the echo sign
@@ -186,13 +186,13 @@ user_level_conf = {
         "labels_interpretation": ["neutral", "hate speech", "responsive"]
     },
     "gab": {
-        "data_path": "data/gab/gab_users_2_labels.tsv",
+        "data_path": "data/user_label/gab_users_2_labels.tsv",
         "following_fn": "labeled_users_followers.tsv",
         "user_unique_column": "user_id",
         "label_column": "label",
         "labels": [0, 1],
         "labels_interpretation": ["Not-HM", "HM"],
-        "posts_per_user_path": "hate_networks/gab_networks/pickled_data/corpora_list_per_user.pkl"
+        "posts_per_user_path": "hate_networks/outputs/gab_networks/pickled_data/corpora_list_per_user.pkl"
     }
 }
 

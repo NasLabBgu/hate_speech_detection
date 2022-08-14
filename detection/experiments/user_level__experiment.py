@@ -336,6 +336,7 @@ def get_followers_followees_dicts(network_dir, following_fn, min_threshold=3):
         mentioned_by_dict[dest].append(src)
     return mentions_dict, mentioned_by_dict
 
+
 def prepare_inputs_outputs(dataset_name, all_posts_probs_df_path, output_path, only_inference=False):
     """
     predict whether a user is a hatemonger or not by his tweets and his friends' (mentioned by the user and mentioning

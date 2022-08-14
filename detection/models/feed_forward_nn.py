@@ -10,7 +10,7 @@ from tensorflow.keras import layers
 from keras.preprocessing import sequence
 from keras.models import Sequential, Model
 from keras.layers import Input, Embedding, Dense, Flatten, GlobalMaxPool1D
-from keras.utils import plot_model
+from keras.utils.vis_utils import plot_model
 import logging
 logger = logging.getLogger(__name__)
 is_tf_with_gpu = tf.test.is_built_with_cuda()

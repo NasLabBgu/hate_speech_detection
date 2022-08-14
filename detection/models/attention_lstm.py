@@ -7,7 +7,7 @@ from tensorflow.keras.layers import Input, Embedding, Dropout, Dense, Bidirectio
 from tensorflow.compat.v1.keras.layers import CuDNNLSTM
 from detection.models.base_model import f1_m
 
-from keras.utils import plot_model
+from keras.utils.vis_utils import plot_model
 
 import tensorflow as tf
 import matplotlib.pyplot as plt

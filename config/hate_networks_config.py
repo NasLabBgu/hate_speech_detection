@@ -1,8 +1,8 @@
 # config file to configure the execution of hate networks creation and coloring
 
 general_conf = {
-    "train_network_type": 'echo',  # echo, gab, covid, antisemitism, racial_slurs
-    "inference_network_type": 'echo',  # echo, gab, covid, antisemitism, racial_slurs
+    "train_network_type": 'gab',  # echo, gab, covid, antisemitism, racial_slurs
+    "inference_network_type": 'gab',  # echo, gab, covid, antisemitism, racial_slurs
     "ignore_punct": False,
     "ignore_retweets": False,
 
@@ -37,27 +37,27 @@ general_conf = {
 path_conf = {
     # the df under user_preds must be a df from a csv file in the format of of user_id, label
     "echo": {
-        "raw_data": "/data/work/data/sharp_power/abusive_language/echoes/recent_history.zip",
+        "raw_data": "/sise/Yalla_work/data/sharp_power/abusive_language/echoes/recent_history.zip",
         "base_output": "./hate_networks/outputs/echo_networks",
         "user_preds": "data/networks_data/echo_predicted_users.csv"
 
     },
     "covid": {
-        "raw_data": "/data/work/data/covid/data/tweets_by_user/",
+        "raw_data": "/sise/Yalla_work/data/covid/data/tweets_by_user/",
         "base_output": "./hate_networks/outputs/covid_networks"
     },
     "antisemitism": {
-        "raw_data": "/data/work/data/hate_speech/antisemitism/tweets_by_user/",
+        "raw_data": "/sise/Yalla_work/data/hate_speech/antisemitism/tweets_by_user/",
         "base_output": "./hate_networks/outputs/antisemitism_networks"
     },
     "racial_slurs": {
-        "raw_data": "/data/work/data/hate_speech/racial_slurs/tweets_by_user/",
+        "raw_data": "/sise/Yalla_work/data/hate_speech/racial_slurs/tweets_by_user/",
         "base_output": "./hate_networks/outputs/racial_slurs_networks"
     },
     "gab": {
-        "raw_data": "/data/work/data/hate_speech/gab/data/gab_posts_jan_2018.json",
-        "followers_data": "/data/work/data/hate_speech/gab/data/followers_2018_02_01.json",
-        "followings_data": "/data/work/data/hate_speech/gab/data/followings_2018_02_01.json",
+        "raw_data": "/sise/Yalla_work/data/hate_speech/gab/data/gab_posts_jan_2018.json",
+        "followers_data": "/sise/Yalla_work/data/hate_speech/gab/data/followers_2018_02_01.json",
+        "followings_data": "/sise/Yalla_work/data/hate_speech/gab/data/followings_2018_02_01.json",
         "base_output": "./hate_networks/outputs/gab_networks"
     }
 }

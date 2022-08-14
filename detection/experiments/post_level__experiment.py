@@ -1,7 +1,8 @@
 import os
-# f = os.path.dirname(__file__)
+import sys
+f = os.path.dirname(__file__)
 # import sys
-# sys.path.append(os.path.join(f, "../.."))
+sys.path.append(os.path.join(f, "../.."))
 import json
 import pickle
 import pandas as pd

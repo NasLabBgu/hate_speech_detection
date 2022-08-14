@@ -13,12 +13,12 @@ from utils.general import init_log
 import warnings
 warnings.filterwarnings('ignore')
 
+
 # Full pipeline
 def full_pipeline(train_network_type='echo', inference_network_type='echo', K=5, dist_topic_number=15, tm_model_type="lda", tm_vec_type="tfidf",
                   tm_feature_size=500, w2v_embedding_size=300, use_bert=False, w2v_arch="cbow", w2v_window=10,
                   w2v_min_count=5, edge_type="mention", min_edge_weight=3, layout_type="fr", with_labels=False):
     """
-
     Full pipeline for creating topic model and word2vec representations of users and then create a graph for each of
     the representations while coloring each user by its main topic or cluster.
 
@@ -57,9 +57,9 @@ def full_pipeline(train_network_type='echo', inference_network_type='echo', K=5,
     with open(corpora_path, 'rb') as f:
         tweets_corpora = pickle.load(f)
 
-    run_topic_model(tweets_corpora=tweets_corpora, users_df=users_df, topic_num=K, feature_num=tm_feature_size, train_path=train_base_output_path, inference_path=inference_base_output_path)
+    # run_topic_model(tweets_corpora=tweets_corpora, users_df=users_df, topic_num=K, feature_num=tm_feature_size, train_path=train_base_output_path, inference_path=inference_base_output_path)
     # run again for the clustering (possibly with different topic number)
-    run_topic_model(tweets_corpora=tweets_corpora, users_df=users_df, topic_num=dist_topic_number, feature_num=tm_feature_size, train_path=train_base_output_path, inference_path=inference_base_output_path)
+    # run_topic_model(tweets_corpora=tweets_corpora, users_df=users_df, topic_num=dist_topic_number, feature_num=tm_feature_size, train_path=train_base_output_path, inference_path=inference_base_output_path)
     # WORD2VEC
 
     run_word_embedding(tweets_corpora, users_df, w2v_arch, w2v_embedding_size, use_bert, w2v_window, w2v_min_count, base_path=inference_base_output_path)

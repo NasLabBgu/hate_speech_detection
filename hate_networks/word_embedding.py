@@ -34,24 +34,24 @@ def run_word_embedding(tweets_corpora, users_df, arch, embedding_size, use_bert,
     create_dir_if_missing(w2v_models_path)
     current_model_dir = os.path.join(w2v_models_path, w2v_model_name)
     # word2vec model already exists with this configuration
-    if os.path.exists(current_model_dir):
-        logger.info(f"{arch} word2vec model with configuration of {embedding_size} embedding size, {window_size} window"
-                    f" size, and {min_count} min count already created")
-        return
+    # if os.path.exists(current_model_dir):
+    #     logger.info(f"{arch} word2vec model with configuration of {embedding_size} embedding size, {window_size} window"
+    #                 f" size, and {min_count} min count already created")
+    #     return
 
-    else:  # create new model
-        if not use_bert:  # regular word2vec model
-            with open(all_tweets_path, 'rb') as f:
-                all_tweets = pickle.load(f)
-            # create word2vec model
-            create_word2vec_model(tweets=all_tweets, embedding_size=embedding_size, window_size=window_size,
-                                  min_count=min_count, sg=sg, model_dir_path=current_model_dir)
-            # create embedding to each user using the word2vec model
-            current_model_name = current_model_dir.split("/")[-1] + ".model"
-            current_model_path = os.path.join(current_model_dir, current_model_name)
-            create_users_embeddings(users_df, tweets_corpora, w2v_path, current_model_path)
-        else:  # use bert pre-trained model
-            bert_embeddings(users_df, tweets_corpora)
+    # else:  # create new model
+    #     if not use_bert:  # regular word2vec model
+    #         with open(all_tweets_path, 'rb') as f:
+    #             all_tweets = pickle.load(f)
+    #         # create word2vec model
+    #         create_word2vec_model(tweets=all_tweets, embedding_size=embedding_size, window_size=window_size,
+    #                               min_count=min_count, sg=sg, model_dir_path=current_model_dir)
+    #         # create embedding to each user using the word2vec model
+    current_model_name = current_model_dir.split("/")[-1] + ".model"
+    current_model_path = os.path.join(current_model_dir, current_model_name)
+    create_users_embeddings(users_df, tweets_corpora, w2v_path, current_model_path)
+        # else:  # use bert pre-trained model
+        #     bert_embeddings(users_df, tweets_corpora)
 # Word2Vec -> Clustering
 def create_word2vec_model(tweets, embedding_size, window_size, min_count, sg, model_dir_path):
     """
@@ -75,7 +75,7 @@ def create_word2vec_model(tweets, embedding_size, window_size, min_count, sg, mo
     preprocessed_tweets = [gensim.utils.simple_preprocess(text, max_len=100) for text in tweets]
     logger.info(f"started word2vec training with {arch} architecute, {embedding_size} embedding size, {window_size} "
                 f"window size and {min_count} min count.")
-    model = gensim.models.Word2Vec(preprocessed_tweets, size=embedding_size, window=window_size,
+    model = gensim.models.Word2Vec(preprocessed_tweets, vector_size=embedding_size, window=window_size,
                                    min_count=min_count, workers=10, sg=sg)
     model.train(preprocessed_tweets, total_examples=len(preprocessed_tweets), epochs=10)
     print("finished training")
@@ -169,11 +169,11 @@ def create_users_embeddings(users_df, users_corpora, w2v_base_path, word2vec_pat
 
     # get embeddings of tweets
     for i, corpus in enumerate(tqdm(users_corpora)):
-
         text_list = corpus.split()
         text_embeddings = defaultdict(lambda x: np.ndarray)
+        vocab = list(model.wv.index_to_key)
         for word in text_list:
-            if word in model.wv.vocab:
+            if word in vocab:
                 text_embeddings[word] = list(model.wv[word])
         # text_mat = []
         # for key, value in text_embeddings.items():
@@ -193,6 +193,7 @@ def create_users_embeddings(users_df, users_corpora, w2v_base_path, word2vec_pat
     users_embeddings_df_without_corpus.to_csv(current_user_embeddings_path, sep='\t', index=False)
 
     # return users_embeddings_df_without_corpus
+
 
 def w2v_cluster_users(users_embedding_df, w2v_model_name, embedding_size, K, w2v_base_path):
     """
