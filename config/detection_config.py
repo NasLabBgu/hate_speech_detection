@@ -186,7 +186,7 @@ user_level_conf = {
         "labels_interpretation": ["neutral", "hate speech", "responsive"]
     },
     "gab": {
-        "data_path": "data/user_label/gab_users_2_labels.tsv",
+        "data_path": "data/user_level/gab_users_2_labels.tsv",
         "following_fn": "labeled_users_followers.tsv",
         "user_unique_column": "user_id",
         "label_column": "label",
