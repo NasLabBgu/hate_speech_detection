@@ -20,7 +20,7 @@ trending_topic_conf = {
     "factor": 3,  # the relative growth of the topic's popularity
     "factor_power": 0.1,
     "user_limit": False,  # to consider specific users' tweets
-    "ignore_retweets": True, #whether or not to ignore retweets along finding the relevant trending unigrams/bigrmas
+    "ignore_retweets": True, #whether to ignore retweets along finding the relevant trending unigrams/bigrmas
     "ignore_punct": True,
     "only_english": True,
     "topn_to_save": 50
@@ -28,55 +28,55 @@ trending_topic_conf = {
 
 path_confs = {
     "covid": {
-        "root_path": "/sise/Yalla_work/data/data/covid/",
-        "raw_data": "/sise/Yalla_work/data/data/covid/data/",
-        "pickled_data": "/sise/Yalla_work/data/data/covid/processed_data/pickled_data/",
-        "models": "/sise/Yalla_work/data/data/covid/processed_data/models/",
-        "output_trending_topic_dir": f"/sise/Yalla_work/data/data/covid/trending_topics/",
+        "root_path": "/sise/Yalla_work/data/covid/",
+        "raw_data": "/sise/Yalla_work/data/covid/data/",
+        "pickled_data": "/sise/Yalla_work/data/covid/processed_data/pickled_data/",
+        "models": "/sise/Yalla_work/data/covid/processed_data/models/",
+        "output_trending_topic_dir": f"/sise/Yalla_work/data/covid/trending_topics/",
         "output_trending_topic_fn": f"{trending_topic_conf['chunks_back_num']}ChunksBack_"
                                     f"XXXXXChunkSize_"
                                     f"{trending_topic_conf['latest_date'].strftime('%Y-%m-%d')}LastDate.tsv",
-        "ts": "/sise/Yalla_work/data/data/covid/ts/"
+        "ts": "/sise/Yalla_work/data/covid/ts/"
     },
     "antisemitism": {
-        "root_path": "/sise/Yalla_work/data/data/hate_speech/antisemitism/",
-        "raw_data": "/sise/Yalla_work/data/data/hate_speech/antisemitism/data/",
-        "pickled_data": "/sise/Yalla_work/data/data/hate_speech/antisemitism/processed_data/pickled_data/",
-        "models": "/sise/Yalla_work/data/data/hate_speech/antisemitism/processed_data/models/",
-        "output_trending_topic_dir": f"/sise/Yalla_work/data/data/hate_speech/antisemitism/trending_topics/",
+        "root_path": "/sise/Yalla_work/data/hate_speech/antisemitism/",
+        "raw_data": "/sise/Yalla_work/data/hate_speech/antisemitism/data/",
+        "pickled_data": "/sise/Yalla_work/data/hate_speech/antisemitism/processed_data/pickled_data/",
+        "models": "/sise/Yalla_work/data/hate_speech/antisemitism/processed_data/models/",
+        "output_trending_topic_dir": f"/sise/Yalla_work/data/hate_speech/antisemitism/trending_topics/",
         "output_trending_topic_fn": f"{trending_topic_conf['chunks_back_num']}ChunksBack_"
                                     f"XXXXXChunkSize_"
                                     f"{trending_topic_conf['latest_date'].strftime('%Y-%m-%d')}LastDate.tsv",
-        "ts": "/sise/Yalla_work/data/data/hate_speech/antisemitism/ts/"
+        "ts": "/sise/Yalla_work/data/hate_speech/antisemitism/ts/"
     },
     "racial_slurs": {
-        "root_path": "/sise/Yalla_work/data/data/hate_speech/racial_slurs/",
-        "raw_data": "/sise/Yalla_work/data/data/hate_speech/racial_slurs/data/",
-        "pickled_data": "/sise/Yalla_work/data/data/hate_speech/racial_slurs/processed_data/pickled_data/",
-        "models": "/sise/Yalla_work/data/data/hate_speech/racial_slurs/processed_data/models/",
-        "output_trending_topic_dir": f"/sise/Yalla_work/data/data/hate_speech/racial_slurs/trending_topics/",
+        "root_path": "/sise/Yalla_work/data/hate_speech/racial_slurs/",
+        "raw_data": "/sise/Yalla_work/data/hate_speech/racial_slurs/data/",
+        "pickled_data": "/sise/Yalla_work/data/hate_speech/racial_slurs/processed_data/pickled_data/",
+        "models": "/sise/Yalla_work/data/hate_speech/racial_slurs/processed_data/models/",
+        "output_trending_topic_dir": f"/sise/Yalla_work/data/hate_speech/racial_slurs/trending_topics/",
         "output_trending_topic_fn": f"{trending_topic_conf['chunks_back_num']}ChunksBack_"
                                     f"XXXXXChunkSize_"
                                     f"{trending_topic_conf['latest_date'].strftime('%Y-%m-%d')}LastDate.tsv",
-        "ts": "/sise/Yalla_work/data/data/hate_speech/racial_slurs/ts/"
+        "ts": "/sise/Yalla_work/data/hate_speech/racial_slurs/ts/"
     },
     "all_datasets": {
-        "root_path": "/sise/Yalla_work/data/data/hate_speech/all_datasets/",
-        "pickled_data": "/sise/Yalla_work/data/data/hate_speech/all_datasets/pickled_data/",
-        "models": "/sise/Yalla_work/data/data/hate_speech/all_datasets/models/",
-        "output_trending_topic_dir": f"/sise/Yalla_work/data/data/hate_speech/all_datasets/trending_topics/",
+        "root_path": "/sise/Yalla_work/data/hate_speech/all_datasets/",
+        "pickled_data": "/sise/Yalla_work/data/hate_speech/all_datasets/pickled_data/",
+        "models": "/sise/Yalla_work/data/hate_speech/all_datasets/models/",
+        "output_trending_topic_dir": f"/sise/Yalla_work/data/hate_speech/all_datasets/trending_topics/",
         "output_trending_topic_fn": f"{trending_topic_conf['chunks_back_num']}ChunksBack_"
                                     f"XXXXXChunkSize_"
                                     f"{trending_topic_conf['latest_date'].strftime('%Y-%m-%d')}LastDate.tsv",
-        "ts": "/sise/Yalla_work/data/data/hate_speech/all_datasets/ts/"
+        "ts": "/sise/Yalla_work/data/hate_speech/all_datasets/ts/"
     },
     "gab": {
-        "root_path": "/sise/Yalla_work/data/data/hate_speech/gab/",
-        "raw_data": "/sise/Yalla_work/data/data/hate_speech/gab/data/",
-        "pickled_data": "/sise/Yalla_work/data/data/hate_speech/gab/processed_data/pickled_data/",
-        "models": "/sise/Yalla_work/data/data/hate_speech/gab/processed_data/models/",
-        "ts": "/sise/Yalla_work/data/data/hate_speech/gab/ts/",
-        "output_trending_topic_dir": "/sise/Yalla_work/data/data/hate_speech/trending_topics/",
+        "root_path": "/sise/Yalla_work/data/hate_speech/gab/",
+        "raw_data": "/sise/Yalla_work/data/hate_speech/gab/data/",
+        "pickled_data": "/sise/Yalla_work/data/hate_speech/gab/processed_data/pickled_data/",
+        "models": "/sise/Yalla_work/data/hate_speech/gab/processed_data/models/",
+        "ts": "/sise/Yalla_work/data/hate_speech/gab/ts/",
+        "output_trending_topic_dir": "/sise/Yalla_work/data/hate_speech/trending_topics/",
         "output_trending_topic_fn": f"{trending_topic_conf['chunks_back_num']}ChunksBack_"
                                     f"XXXXXChunkSize_"
                                     f"{trending_topic_conf['latest_date'].strftime('%Y-%m-%d')}LastDate.tsv",

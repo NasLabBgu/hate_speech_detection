@@ -48,8 +48,8 @@ def full_pipeline(train_network_type='echo', inference_network_type='echo', K=5,
     ignore_punct = general_conf["ignore_punct"]
     ignore_rt = general_conf["ignore_retweets"]
     # TOPIC MODEL (MAX TOPIC)
-    if not os.path.exists(users_path):  # extracting users data for the first time
-        extract_data_from_tweets(data_path=raw_data_path, ignore_rt=ignore_rt, ignore_punct=ignore_punct, base_path=inference_base_output_path)
+    # if not os.path.exists(users_path):  # extracting users data for the first time
+    extract_data_from_tweets(data_path=raw_data_path, ignore_rt=ignore_rt, ignore_punct=ignore_punct, base_path=inference_base_output_path)
     users_df = pd.read_csv(users_path, sep='\t')
     # users_df = pd.read_csv("./hate_networks/Echo networks/permanent_users_df.csv")
     # users_df['user_id'] = users_df['user_id'].astype(str)

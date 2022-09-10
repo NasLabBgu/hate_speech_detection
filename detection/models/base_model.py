@@ -4,6 +4,7 @@ import tensorflow as tf
 import math
 from detection.detection_utils.factory import create_dir_if_missing
 import logging
+
 logger = logging.getLogger(__name__)
 import numpy as np
 import pandas as pd
@@ -11,21 +12,28 @@ from sklearn.metrics import *
 from tensorflow.keras.callbacks import *
 import datetime
 import matplotlib.pyplot as plt
+
 plt.style.use("ggplot")
 from sklearn.utils.class_weight import compute_class_weight
+from sklearn.model_selection import train_test_split
 import pickle
 from tensorflow.keras import backend as K
+
 
 def recall_m(y_true, y_pred):
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
     possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
     recall = true_positives / (possible_positives + K.epsilon())
     return recall
+
+
 def precision_m(y_true, y_pred):
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
     predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
     precision = true_positives / (predicted_positives + K.epsilon())
     return precision
+
+
 def f1_m(y_true, y_pred):
     precision = precision_m(y_true, y_pred)
     recall = recall_m(y_true, y_pred)
@@ -41,6 +49,8 @@ class BaseModel(ABC):
         self.paths = kwargs['paths']
         self.metric_dict = {"f1": f1_score, "accuracy": accuracy_score, "precision": precision_score,
                             "recall": recall_score, "balanced_accuracy": balanced_accuracy_score, "auc": roc_auc_score}
+        self.bs = kwargs['bs']
+
     @abstractmethod
     def fit(self, X_train, y_train):
         logger.info(f"fitting model {self.name}")
@@ -52,6 +62,7 @@ class BaseModel(ABC):
     @abstractmethod
     def predict_proba(self, X_test):
         logger.info(f"predicting proba using model {self.name}")
+
 
 class NeuralNetworkModel(BaseModel):
     def __init__(self, **kwargs):
@@ -66,14 +77,14 @@ class NeuralNetworkModel(BaseModel):
             else:
                 res = max_learn_rate * math.exp(
                     math.log(end_learn_rate / max_learn_rate) * (epoch - warmup_epoch_count + 1) / (
-                                total_epoch_count - warmup_epoch_count + 1))
+                            total_epoch_count - warmup_epoch_count + 1))
             return float(res)
 
         learning_rate_scheduler = tf.keras.callbacks.LearningRateScheduler(lr_scheduler, verbose=1)
 
         return learning_rate_scheduler
 
-    def fit(self, X_train, y_train):
+    def fit(self, X_train, y_train, val=False):
         super().fit(X_train, y_train)
         train_output_path = self.paths['train_output']
         model_output_path = self.paths['model_output']
@@ -86,25 +97,36 @@ class NeuralNetworkModel(BaseModel):
 
         epochs = self.kwargs['epochs']
         validation_split = self.kwargs['validation_split']
-        model_weights_file_path = os.path.join(model_output_path, "weights_best.h5")
+        validation_data = None
+        if val:
+            X_train, X_val, y_train, y_val = train_test_split(X_train, y_train, test_size=validation_split,
+                                                              random_state=0,
+                                                              stratify=y_train)
+            validation_data = (X_val, y_val)
+            validation_split = 0.0
+        model_weights_file_path = os.path.join(model_output_path, "model_best.h5")
         # model_file_path = os.path.join(model_output_path, "model.h5")
         # full_model_file_path = os.path.join(model_output_path, "full_model.pkl")
-        checkpoint = ModelCheckpoint(model_weights_file_path, monitor='val_loss', verbose=2, save_best_only=True, mode='min')
+        checkpoint = ModelCheckpoint(model_weights_file_path, monitor='val_loss', verbose=2, save_best_only=True,
+                                     mode='min', save_weights_only=True)
 
-        if self.name == 'BertAttentionLSTM':
+        if self.name == 'BertFineTuning1':
             reduce_lr = self.create_learning_rate_scheduler(max_learn_rate=1e-5,
-                                           end_learn_rate=1e-7,
-                                           warmup_epoch_count=20,
-                                           total_epoch_count=epochs)
+                                                            end_learn_rate=1e-7,
+                                                            warmup_epoch_count=20,
+                                                            total_epoch_count=epochs)
         else:
-            reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, min_lr=0.0001, verbose=2)
+            reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, verbose=2)
 
-        early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=5, verbose=2, mode='auto', restore_best_weights=True)
-        callbacks = [reduce_lr, early_stopping]  # not using checkpoint since it's saving the model fully
+        early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=5, verbose=2, mode='auto',
+                                       restore_best_weights=True)
+        callbacks = [reduce_lr, early_stopping, checkpoint]  # not using checkpoint since it's saving the model fully
 
         # class weights (handling imabalanced data)
         if len(y_train.shape) > 1:
-            y_train_for_class_weight = y_train[y_train == 1].stack().reset_index().drop(0, 1).set_index('level_0').rename(columns={"level_1": "label"})["label"]
+            y_train_for_class_weight = \
+                y_train[y_train == 1].stack().reset_index().drop(0, 1).set_index('level_0').rename(
+                    columns={"level_1": "label"})["label"]
         else:
             y_train_for_class_weight = y_train.copy()
         class_weights = compute_class_weight(
@@ -115,8 +137,9 @@ class NeuralNetworkModel(BaseModel):
 
         # fit the model
         # with tf.device("/device:GPU:0"):
-        hist = self.model.fit(X_train, y_train, batch_size=32, epochs=epochs, validation_split=validation_split,
-                       class_weight=train_class_weights, callbacks=callbacks)
+        hist = self.model.fit(X_train, y_train, batch_size=self.bs, epochs=epochs, validation_data=validation_data,
+                              validation_split=validation_split,
+                              class_weight=train_class_weights, callbacks=callbacks)
         # save the model
         self.model.save_weights(model_weights_file_path)  # save model's weights
         # self.model.save(model_file_path, save_format='tf')  # save full model
@@ -135,7 +158,6 @@ class NeuralNetworkModel(BaseModel):
         loss_fn = os.path.join(train_output_path, "loss_graph.png")
         plt.savefig(loss_fn)
         if 'accuracy' in hist.history.keys():
-
             plt.figure()
             plt.title('Accuracy per epoch')
             plt.plot(hist.history['accuracy'], label='train')
@@ -160,8 +182,8 @@ class NeuralNetworkModel(BaseModel):
 
     def predict(self, X_test):
         super().predict(X_test)
-        if self.name == 'BertAttentionLSTM':
-            X_test = X_test["input_ids"]  #, X_test["token_type_ids"]]
+        # if self.name == 'BertFineTuning':
+        #     X_test = X_test["input_ids"]  # , X_test["token_type_ids"]]
         y_score = self.model.predict(X_test)
 
         if y_score.shape[-1] > 1:
@@ -173,8 +195,8 @@ class NeuralNetworkModel(BaseModel):
 
     def predict_proba(self, X_test):
         super().predict_proba(X_test)
-        if self.name == 'BertAttentionLSTM':
-            X_test = X_test["input_ids"]  #, X_test["token_type_ids"]]
+        # if self.name == 'BertFineTuning':
+        #     X_test = X_test["input_ids"]  # , X_test["token_type_ids"]]
         y_score = self.model.predict(X_test)
         return y_score
 

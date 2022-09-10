@@ -15,6 +15,28 @@ from utils.my_timeit import timeit
 from utils.general import init_log
 logger = init_log("post_level_single_experiments")
 
+
+def find_optimal_threshold(target, predicted):
+    """ Find the optimal probability cutoff point for a classification model related to event rate
+    Parameters
+    ----------
+    target : Matrix with dependent or target data, where rows are observations
+
+    predicted : Matrix with predicted data, where rows are observations
+
+    Returns
+    -------
+    list type, with optimal cutoff value
+
+    """
+    fpr, tpr, threshold = roc_curve(target, predicted)
+    i = np.arange(len(tpr))
+    roc = pd.DataFrame({'tf': pd.Series(tpr - (1 - fpr), index=i), 'threshold': pd.Series(threshold, index=i)})
+    roc_t = roc.iloc[(roc.tf - 0).abs().argsort()[:1]]
+
+    return list(roc_t['threshold'])
+
+
 @timeit
 def run_single_plm_experiment():
     dataset_name = post_level_execution_config["data"]["dataset"]
@@ -89,17 +111,21 @@ def run_single_plm_experiment():
     # train model
     model.fit(X_train, y_train)
 
+    threshold = find_optimal_threshold(model.predict(X_train), y_train)
+
     # evaluate model and save results
     if not train_on_all_data and X_test is not None:
         y_true_dummy = y_test.copy()
         y_pred = model.predict(X_test)
         y_score = model.predict_proba(X_test)
 
+
         y_true_p = original_y_test.to_frame(name="y_true").reset_index(drop=True)
         y_score_p = pd.DataFrame(y_score, columns=[f"y_score_{x}" for x in labels] if len(labels) > 2 else ['y_score']).reset_index(drop=True)
         y_pred_p = pd.DataFrame(y_pred, columns=['y_pred']).reset_index(drop=True)
         X_test_as_text = X_test_as_text.reset_index(drop=True)
         simple_metrics = {}
+        simple_metrics['threshold'] = threshold
 
         for acc_metric in [accuracy_score, balanced_accuracy_score]:
             simple_metrics[acc_metric.__name__] = acc_metric(y_true_p, y_pred_p)
@@ -129,6 +155,7 @@ def run_single_plm_experiment():
         for metric in post_level_execution_config["evaluation"]["metrics"]:
             evaluator = factory(metric, None, **evaluation_kwargs)
             evaluator.calc(y_true=original_y_test, y_true_dummy=y_true_dummy, y_pred=y_pred, y_score=y_score)
+
 
 if __name__ == '__main__':
     run_single_plm_experiment()

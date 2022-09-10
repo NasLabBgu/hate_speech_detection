@@ -49,6 +49,15 @@ class BertFineTuning(NeuralNetworkModel):
         self.fine_tune = kwargs['fine_tune']
         self.model = self.build_model()
         self.model.summary()
+        self.config = {}
+
+    def get_config(self):
+        config = self.model.get_config().copy()
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
 
     def build_model(self):
         """Creates a classification model.
@@ -67,6 +76,7 @@ class BertFineTuning(NeuralNetworkModel):
         else:
             config = bert_config(dropout=0.2, attention_dropout=0.2)
         transformer_model = bert_model.from_pretrained(bert_pretrained_model_name, config=config)
+        self.config = config
         # inputs
         idx = Input((self.max_seq_len), dtype="int32", name="input_idx")
         if self.bert_conf['use_masking']:

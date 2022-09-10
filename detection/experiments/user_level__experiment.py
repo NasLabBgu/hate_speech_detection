@@ -1,5 +1,6 @@
 import os
 import sys
+
 f = os.path.dirname(__file__)
 sys.path.append(os.path.join(f, "../.."))
 import pickle
@@ -8,10 +9,12 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, PowerTransformer
 from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score, auc, roc_curve
-from config.detection_config import post_level_conf, user_level_conf, post_level_execution_config, user_level_execution_config
+from config.detection_config import post_level_conf, user_level_conf, post_level_execution_config, \
+    user_level_execution_config
 from detection.detection_utils.factory import create_dir_if_missing
 from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.layers import Dense, Concatenate, Input, BatchNormalization, Dropout, Conv2D, MaxPooling2D, Conv1D, MaxPooling1D
+from tensorflow.keras.layers import Dense, Concatenate, Input, BatchNormalization, Dropout, Conv2D, MaxPooling2D, \
+    Conv1D, MaxPooling1D
 from tensorflow.keras.callbacks import *
 from tensorflow.keras import backend as K
 from catboost import CatBoostClassifier
@@ -26,10 +29,12 @@ from detection.models.base_model import f1_m
 from tqdm import tqdm
 from itertools import combinations
 import matplotlib.pyplot as plt
+
 plt.style.use("ggplot")
 
 from utils.my_timeit import timeit
 from utils.general import init_log
+
 logger = init_log("user_level_experiment")
 
 
@@ -46,17 +51,28 @@ def load_post_model(**post_level_kwargs):
     post_level_kwargs["kwargs"]["vocab_size"] = pt.vocab_size
 
     model = factory(post_level_kwargs["model"], **post_level_kwargs["kwargs"])
-    logger.info(f'loading post model from {os.path.join(model.kwargs["paths"]["model_output"])}')
 
-    model_weights_file_path = os.path.join(model.kwargs["paths"]["model_output"], "weights_best.h5")
-    model.model.load_weights(model_weights_file_path)
+    if post_level_kwargs['kwargs']['weights_only']:
+        # model = factory(post_level_kwargs["model"], **post_level_kwargs["kwargs"])
+        # logger.info(f'loading post model from {os.path.join(model.kwargs["paths"]["model_output"])}')
+
+        logger.info(f'loading post model from {os.path.join(model.kwargs["paths"]["model_output"])}')
+        model_weights_file_path = os.path.join(model.kwargs["paths"]["model_output"], "weights_best.h5")
+        model.model.load_weights(model_weights_file_path)
+
+    else:
+        model_weights_file_path = os.path.join(post_level_kwargs["kwargs"]["paths"]["model_output"], "model_best.h5")
+
+        model.model = load_model(model_weights_file_path, custom_objects={'f1_m': f1_m, 'AttentionWithContext': AttentionWithContext})
     # model = load_model(os.path.join(model_path, "saved_model/model.h5"),
     #                custom_objects={'AttentionWithContext': AttentionWithContext, 'GlorotUniform': glorot_uniform()})
-
+    print(model.model.summary())
     return pt, model
 
+
 def predict_all_users(trained_dataset_name, inference_dataset_name, user_level_path):
-    logger.info(f"predicting all users for dataset: {inference_dataset_name} using models train on {trained_dataset_name} data")
+    logger.info(
+        f"predicting all users for dataset: {inference_dataset_name} using models train on {trained_dataset_name} data")
     logger.info(f"predicting all users for dataset: {inference_dataset_name}")
     post_level_data_conf = post_level_conf[trained_dataset_name]
     labels = post_level_data_conf["labels"]
@@ -84,7 +100,8 @@ def predict_all_users(trained_dataset_name, inference_dataset_name, user_level_p
                 user_id = str(user_id)
                 current_user_df = pd.DataFrame({'user_id': [user_id for _ in range(len(user_posts))],
                                                 'post_id': [user_post_tup[0] for user_post_tup in user_posts],
-                                                'text': [user_post_tup[1].strip() for user_post_tup in user_posts if user_post_tup[1].strip() != ''],
+                                                'text': [user_post_tup[1].strip() for user_post_tup in user_posts if
+                                                         user_post_tup[1].strip() != ''],
                                                 })
                 full_df = full_df.append(current_user_df, ignore_index=True)
         else:
@@ -113,24 +130,33 @@ def predict_all_users(trained_dataset_name, inference_dataset_name, user_level_p
     logger.info(f"preprocessing in chunks of {chunk_size}...")
     logger.info(f"Length of full_df: {len(full_df)}")
     for user_range in range(0, len(full_df), chunk_size):
-        current_full_df = full_df.loc[user_range:user_range+chunk_size-1]
-        current_X = current_full_df["text"]
+        if user_range > 3 * chunk_size:
+            current_full_df = full_df.loc[user_range:user_range + chunk_size - 1]
+            current_X = current_full_df["text"]
 
-        _, X_test, _, _, _, _ = pt.full_preprocessing(current_X, None, mode='test')
-        logger.info(f"predicting users tweets; indices: {user_range} to {user_range+chunk_size-1}...")
-        y_proba = post_model.predict_proba(X_test)
-        current_full_df.loc[:, 'predictions'] = y_proba
+            _, X_test, _, _, _, _ = pt.full_preprocessing(current_X, None, mode='test')
+            logger.info(f"predicting users tweets; indices: {user_range} to {user_range + chunk_size - 1}...")
+            y_proba = post_model.predict_proba(X_test)
+            # y_proba = post_model.predict(X_test)
+            current_full_df.loc[:, 'predictions'] = y_proba
 
-        create_dir_if_missing(os.path.join(user_level_path, "split_by_posts"))
-        create_dir_if_missing(os.path.join(user_level_path, "split_by_posts", "no_text"))
-        create_dir_if_missing(os.path.join(user_level_path, "split_by_posts", "with_text"))
-        logger.info(f"saving predictions to {user_level_path}")
+            create_dir_if_missing(os.path.join(user_level_path, "split_by_posts"))
+            create_dir_if_missing(os.path.join(user_level_path, "split_by_posts", "no_text"))
+            create_dir_if_missing(os.path.join(user_level_path, "split_by_posts", "with_text"))
+            logger.info(f"saving predictions to {user_level_path}")
 
-        current_full_df[['user_id', 'predictions']].to_parquet(os.path.join(user_level_path, "split_by_posts", "no_text", f"user2pred_min_idx_{user_range}_max_idx_{user_range+chunk_size-1}.parquet"), index=False)
+            current_full_df[['user_id', 'predictions']].to_parquet(
+                os.path.join(user_level_path, "split_by_posts", "no_text",
+                             f"user2pred_min_idx_{user_range}_max_idx_{user_range + chunk_size - 1}.parquet"),
+                index=False)
 
-        current_full_df.to_parquet(os.path.join(user_level_path, "split_by_posts", "with_text", f"user2pred_with_text_min_idx_{user_range}_max_idx_{user_range+chunk_size-1}.parquet"), index=False)
+            current_full_df.to_parquet(os.path.join(user_level_path, "split_by_posts", "with_text",
+                                                    f"user2pred_with_text_min_idx_{user_range}_max_idx_{user_range + chunk_size - 1}.parquet"),
+                                       index=False)
 
-def build_user_model(max_user_tweets:int, max_followings_num:int, max_followers_num:int, network_feautres_num:int, relevant_inputs) -> Model:
+
+def build_user_model(max_user_tweets: int, max_followings_num: int, max_followers_num: int, network_feautres_num: int,
+                     relevant_inputs) -> Model:
     """
     Function that builds the NN for the user-level model
     :param max_user_tweets:
@@ -169,7 +195,9 @@ def build_user_model(max_user_tweets:int, max_followings_num:int, max_followers_
 
     return model
 
-def prepare_data_for_modeling(X, y, relevant_features_idx, normalize_features, test_size, output_path, only_inference=False):
+
+def prepare_data_for_modeling(X, y, relevant_features_idx, normalize_features, test_size, output_path,
+                              only_inference=False):
     for i in range(len(X)):
         X[i][np.isnan(X[i])] = 0.0
 
@@ -211,6 +239,7 @@ def prepare_data_for_modeling(X, y, relevant_features_idx, normalize_features, t
                     pickle.dump(scaler, open(os.path.join(output_path, "scaler.pkl"), "wb"))
     return X_train, X_test, y_train, y_test
 
+
 def run_user_model(X, y, features_to_use, output_path, model_type="nn", normalize_features=True, test_size=0.2):
     input_features_mapping = {"self": 0, "followings": 1, "followers": 2, "network": 3}
     relevant_features_idx = [v for k, v in input_features_mapping.items() if k in features_to_use]
@@ -220,16 +249,18 @@ def run_user_model(X, y, features_to_use, output_path, model_type="nn", normaliz
     res_row["model"] = model_type
     if test_size is None:
         ## train with all data for best performing configuration.
-        X_train, _, y_train, _ = prepare_data_for_modeling(X, y, relevant_features_idx, normalize_features, test_size, output_path)
+        X_train, _, y_train, _ = prepare_data_for_modeling(X, y, relevant_features_idx, normalize_features, test_size,
+                                                           output_path)
     else:
-        X_train, X_test, y_train, y_test = prepare_data_for_modeling(X, y, relevant_features_idx, normalize_features, test_size, output_path)
+        X_train, X_test, y_train, y_test = prepare_data_for_modeling(X, y, relevant_features_idx, normalize_features,
+                                                                     test_size, output_path)
     if model_type == "nn":
         user_model = build_user_model(X[0].shape[1], X[1].shape[1], X[2].shape[1], X[3].shape[1], relevant_features_idx)
         early_stopping = EarlyStopping(monitor='val_loss', min_delta=0.0001, patience=10, verbose=1, mode='auto',
                                        restore_best_weights=True)
         class_weight = compute_class_weight('balanced', np.unique(y_train), y_train)
         hist = user_model.fit(x=X_train, y=y_train, batch_size=128, epochs=60, validation_split=0.2, verbose=0,
-                              callbacks=[], class_weight={i : class_weight[i] for i in range(2)})
+                              callbacks=[], class_weight={i: class_weight[i] for i in range(2)})
         if test_size is None:
             user_model.save(os.path.join(output_path, "best_user_model.model"), save_format='tf')
     else:
@@ -300,6 +331,7 @@ def run_user_model(X, y, features_to_use, output_path, model_type="nn", normaliz
                 res_row[metric.__name__] = metric(y_test, y_pred)
     return res_row
 
+
 def predict_all_users_labels(X, features_to_use, model_type, model_path, normalize_features, output_path):
     if model_type == "nn":
         user_model = load_model(model_path, custom_objects={'f1': f1_m})
@@ -307,13 +339,15 @@ def predict_all_users_labels(X, features_to_use, model_type, model_path, normali
         user_model = pickle.load(open(model_path, "rb"))
     input_features_mapping = {"self": 0, "followings": 1, "followers": 2, "network": 3}
     relevant_features_idx = [v for k, v in input_features_mapping.items() if k in features_to_use]
-    X = prepare_data_for_modeling(X, None, relevant_features_idx, normalize_features, None, output_path, only_inference=True)
+    X = prepare_data_for_modeling(X, None, relevant_features_idx, normalize_features, None, output_path,
+                                  only_inference=True)
     y_pred = user_model.predict(X)
     user_df = pd.read_csv(os.path.join(output_path, "io", "all_users_df.tsv"), sep='\t')
     user_df.to_csv(os.path.join(output_path, "all_pred.tsv"), sep='\t', index=False)
 
     user2pred = pd.concat([user_df, y_pred], axis=1)
     user2pred.to_csv(os.path.join(output_path, "all_users2pred.tsv"), sep='\t', index=False)
+
 
 def get_followers_followees_dicts(network_dir, following_fn, min_threshold=3):
     edges_dir = os.path.join(network_dir, "edges")
@@ -370,7 +404,9 @@ def prepare_inputs_outputs(dataset_name, all_posts_probs_df_path, output_path, o
 
     network_dir = f"hate_networks/outputs/{dataset_name.split('_')[0]}_networks/network_data/"
     # load centralities features for each user
-    centralities_df = pd.read_csv(os.path.join(network_dir, "features", "centralities_mention_edges_filtered_singletons_filtered.tsv"), sep='\t')  # centralities_mention_all_edges_all_nodes.tsv
+    centralities_df = pd.read_csv(
+        os.path.join(network_dir, "features", "centralities_mention_edges_filtered_singletons_filtered.tsv"),
+        sep='\t')  # centralities_mention_all_edges_all_nodes.tsv
     centralities_df[user_column] = centralities_df[user_column].astype(str)
     centrality_measurements = [col for col in centralities_df.columns if col != 'user_id']
     min_mention_threshold = 3
@@ -416,14 +452,16 @@ def prepare_inputs_outputs(dataset_name, all_posts_probs_df_path, output_path, o
             followings = [followee for followee in followings if followee in all_users_list]
             if len(followings) > 0:
                 followings_predictions = all_users_probs.loc[all_users_probs["user_id"].isin(followings)]
-                avg_followings_predictions = followings_predictions.groupby('user_id').agg({'predictions': 'mean'})['predictions']
+                avg_followings_predictions = followings_predictions.groupby('user_id').agg({'predictions': 'mean'})[
+                    'predictions']
 
         if user_id in mentioned_by_dict.keys():
             followers = mentioned_by_dict[user_id]  # users mentioning the observed user
             followers = [follower for follower in followers if follower in all_users_list]
             if len(followers) > 0:
                 followers_predictions = all_users_probs.loc[all_users_probs["user_id"].isin(followers)]
-                avg_followers_predictions = followers_predictions.groupby('user_id').agg({'predictions': 'mean'})['predictions']
+                avg_followers_predictions = followers_predictions.groupby('user_id').agg({'predictions': 'mean'})[
+                    'predictions']
 
         self_predictions = all_users_probs.loc[all_users_probs["user_id"] == user_id, "predictions"]
 
@@ -470,6 +508,7 @@ def prepare_inputs_outputs(dataset_name, all_posts_probs_df_path, output_path, o
         user_df.to_csv(os.path.join(io_path, "all_users_df.tsv"), sep='\t', index=False)
     return all_inputs, outputs
 
+
 @timeit
 def run_ulm_experiment():
     """
@@ -492,8 +531,8 @@ def run_ulm_experiment():
     else:
         all_posts_probs_df_path = os.path.join(inference_path, "user2pred.parquet")
 
-    if not os.path.exists(all_posts_probs_df_path):  # for the first time running this data - predict all posts for all users.
-        predict_all_users(trained_data, inference_data, inference_path)
+    # if not os.path.exists(all_posts_probs_df_path):  # for the first time running this data - predict all posts for all users.
+    predict_all_users(trained_data, inference_data, inference_path)
 
     io_path = os.path.join(inference_path, "io")
     create_dir_if_missing(io_path)
@@ -517,7 +556,8 @@ def run_ulm_experiment():
         inputs = pickle.load(open(os.path.join(io_path, "inputs.pkl"), "rb"))
         output = pickle.load(open(os.path.join(io_path, "outputs.pkl"), "rb"))
     else:
-        inputs, output = prepare_inputs_outputs(inference_data, all_posts_probs_df_path, output_path=user_level_path, only_inference=False)
+        inputs, output = prepare_inputs_outputs(inference_data, all_posts_probs_df_path, output_path=user_level_path,
+                                                only_inference=False)
 
     features_to_use = ["self", "followings", "followers", "network"]  # "self", "followings", "followers", "network"
     test_size = 0.2
@@ -544,9 +584,12 @@ def run_ulm_experiment():
             os.path.join(user_level_path, f"user_level_results__{int(test_size * 100)}_test.tsv"),
             sep='\t', index=False)
     else:
-        if not os.path.exists(os.path.join(user_level_path, "best_user_model.model")): # best model doesn't exist - search for it
+        if not os.path.exists(
+                os.path.join(user_level_path, "best_user_model.model")):  # best model doesn't exist - search for it
 
-            result = pd.DataFrame(columns=features_to_use + ["model"] + [metric.__name__ for metric in [f1_score, accuracy_score, recall_score, precision_score, auc]])
+            result = pd.DataFrame(columns=features_to_use + ["model"] + [metric.__name__ for metric in
+                                                                         [f1_score, accuracy_score, recall_score,
+                                                                          precision_score, auc]])
             # logger.info(run_user_model(inputs, output, features_to_use=["self", "followings"], output_path=user_level_path,
             #                model_type="nn", normalize_features=True))
 
@@ -556,10 +599,13 @@ def run_ulm_experiment():
                 for r in range(1, len(features_to_use) + 1):
                     for fc in combinations(features_to_use, r):
                         res_row = run_user_model(inputs, output, features_to_use=fc, output_path=user_level_path,
-                               model_type=model_type, normalize_features=normalize_features, test_size=test_size)
+                                                 model_type=model_type, normalize_features=normalize_features,
+                                                 test_size=test_size)
                         result = result.append(res_row, ignore_index=True)
 
-            result.to_csv(os.path.join(user_level_path, f"user_level_results__{int(test_size*100)}_test_power_transformed.tsv"), sep='\t', index=False)
+            result.to_csv(
+                os.path.join(user_level_path, f"user_level_results__{int(test_size * 100)}_test_power_transformed.tsv"),
+                sep='\t', index=False)
             sorted_f1_results = result.sort_values('f1_score', ascending=False).reset_index(drop=True)
             best_row = sorted_f1_results.iloc[0]
             best_model = best_row["model"]
@@ -576,7 +622,9 @@ def run_ulm_experiment():
             run_user_model(inputs, output, features_to_use=best_features, output_path=user_level_path,
                            model_type=best_model, normalize_features=normalize_features, test_size=None)
         else:
-            models_results = pd.read_csv(os.path.join(user_level_path, f"user_level_results__{int(test_size*100)}_test_power_transformed.tsv"), sep='\t')
+            models_results = pd.read_csv(
+                os.path.join(user_level_path, f"user_level_results__{int(test_size * 100)}_test_power_transformed.tsv"),
+                sep='\t')
             sorted_f1_results = models_results.sort_values('f1_score', ascending=False).reset_index(drop=True)
             best_row = sorted_f1_results.iloc[0]
             best_model = best_row["model"]
@@ -593,11 +641,13 @@ def run_ulm_experiment():
             logger.info(f"only_inputs already exists for dataset {inference_data}. Loading them from {io_path}...")
             only_inputs = pickle.load(open(os.path.join(io_path, "only_inputs.pkl"), "rb"))
         else:
-            only_inputs, _ = prepare_inputs_outputs(inference_data, all_posts_probs_df_path, output_path=user_level_path, only_inference=True)
+            only_inputs, _ = prepare_inputs_outputs(inference_data, all_posts_probs_df_path,
+                                                    output_path=user_level_path, only_inference=True)
 
         predict_all_users_labels(only_inputs, best_features, model_type=best_model,
                                  model_path=os.path.join(user_level_path, "best_user_model.model"),
                                  normalize_features=normalize_features, output_path=user_level_path)
+
 
 if __name__ == '__main__':
     """

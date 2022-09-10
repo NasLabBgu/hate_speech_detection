@@ -152,6 +152,7 @@ class AttentionLSTM(NeuralNetworkModel):
         super().__init__(**kwargs)
         self.max_seq_len = kwargs['max_seq_len']
         self.model_api = kwargs['model_api']
+        self.dense_units = kwargs['dense_units']
 
         if "pretrained_embeddings" in kwargs.keys():
             self.pretrained_embeddings = kwargs['pretrained_embeddings']
@@ -179,11 +180,11 @@ class AttentionLSTM(NeuralNetworkModel):
         # Functional API
         if self.model_api == 'functional':
             INPUT = Input(shape=(self.max_seq_len,))
-            EMB = emb_layer(INPUT)
-            x = Bidirectional(LSTM_LAYER(128, return_sequences=True))(EMB)
-            x = Bidirectional(LSTM_LAYER(64, return_sequences=True))(x)
+            x = emb_layer(INPUT)
+            # x = Bidirectional(LSTM_LAYER(8, return_sequences=True))(x)
+            # x = Bidirectional(LSTM_LAYER(32, return_sequences=True))(x)
             x = AttentionWithContext()(x)
-            x = Dense(64, activation="relu")(x)
+            x = Dense(self.dense_units, activation="tanh")(x)
             OUTPUT = output_layer(x)
             model = Model(inputs=INPUT, outputs=OUTPUT)
 

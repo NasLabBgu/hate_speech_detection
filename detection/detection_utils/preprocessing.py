@@ -151,8 +151,8 @@ class PreprocessText():
             X_test_as_text = X_test.copy()
 
             if self.preprocess_type == 'bert':
-                X_train = self.bert_preprocessing(X_train, training=True)
-                X_test = self.bert_preprocessing(X_test, training=False)
+                X_train = self.bert_preprocessing(X_train.tolist(), training=True)
+                X_test = self.bert_preprocessing(X_test.tolist(), training=False)
 
             elif self.preprocess_type == 'nn':
                 self.fit_tokenizer(X_train)
@@ -198,7 +198,7 @@ class PreprocessText():
             y_train = None
             y_test = None
             if self.preprocess_type == 'bert':
-                X_test = self.bert_preprocessing(X, training=False)
+                X_test = self.bert_preprocessing(X.tolist(), training=False)
             elif self.preprocess_type == 'nn':
                 X_test = self.transform_tokenizer(X)
                 X_test = self.pad_sequences_(X_test)

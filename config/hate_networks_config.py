@@ -1,8 +1,8 @@
 # config file to configure the execution of hate networks creation and coloring
 
 general_conf = {
-    "train_network_type": 'gab',  # echo, gab, covid, antisemitism, racial_slurs
-    "inference_network_type": 'gab',  # echo, gab, covid, antisemitism, racial_slurs
+    "train_network_type": 'parler',  # echo, gab, parler, covid, antisemitism, racial_slurs
+    "inference_network_type": 'parler',  # echo, gab, parler, covid, antisemitism, racial_slurs
     "ignore_punct": False,
     "ignore_retweets": False,
 
@@ -59,5 +59,13 @@ path_conf = {
         "followers_data": "/sise/Yalla_work/data/hate_speech/gab/data/followers_2018_02_01.json",
         "followings_data": "/sise/Yalla_work/data/hate_speech/gab/data/followings_2018_02_01.json",
         "base_output": "./hate_networks/outputs/gab_networks"
+    },
+    "parler": {
+        "raw_data": "/sise/home/tommarz/parler-hate-speech/data/parler_sampled_posts.tsv",
+        "mentions": "/sise/home/tommarz/parler-hate-speech/data/parler_sampled_users_comments_dict.p",
+        "echos": "/sise/home/tommarz/parler-hate-speech/data/parler_sampled_users_echos_dict.p",
+        # "followers_data": "/sise/Yalla_work/data/hate_speech/gab/data/followers_2018_02_01.json",
+        # "followings_data": "/sise/Yalla_work/data/hate_speech/gab/data/followings_2018_02_01.json",
+        "base_output": "./hate_networks/outputs/parler_networks"
     }
 }

@@ -1,5 +1,6 @@
 import string
 from emoji_extractor.extract import Extractor
+
 extract = Extractor()
 from tqdm import tqdm
 import pandas as pd
@@ -23,7 +24,9 @@ import itertools
 from collections import Counter, defaultdict
 
 import logging
+
 logger = logging.getLogger(__name__)
+
 
 # General functions
 def lookup(json, k):
@@ -39,12 +42,15 @@ def lookup(json, k):
         ks = k.split('.')
         v = json
         for k in ks: v = v.get(k, {})
-        return v #or ""
+        return v  # or ""
     return json.get(k, "")
+
 
 def create_dir_if_missing(path):
     if not os.path.exists(path):
         os.makedirs(path)
+
+
 # def sent_to_words(sentences):
 #     for sentence in sentences:
 #         yield (gensim.detection_utils.simple_preprocess(str(sentence), deacc=True))  # deacc=True removes punctuations
@@ -85,6 +91,7 @@ def text_preprocessing(texts):
         pickle.dump(preprocessed_tweets, f)
     return preprocessed_tweets
 
+
 def extract_data_from_tweets(data_path, ignore_rt, ignore_punct, base_path):
     '''
     A function that given a path to a csv file with tweets returns the corpora which includes tweets of each user
@@ -106,7 +113,6 @@ def extract_data_from_tweets(data_path, ignore_rt, ignore_punct, base_path):
     retweets_dict = defaultdict(dict)
     in_reply_to_dict = defaultdict(dict)
 
-
     tweets_per_user = defaultdict(list)
     users_list = []
     corpora = []
@@ -118,7 +124,33 @@ def extract_data_from_tweets(data_path, ignore_rt, ignore_punct, base_path):
         r'(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})')
     PUNCT_RE = re.compile('[“",?;:!\\-\[\]_.%/\n]')
     MENTION_RE = re.compile(r'@\w+')
-    if file_type == 'csv': # todo: support the sayiqan data as well
+    if 'parler' in data_path:  # file_type == 'tsv': # Parler
+        df = pd.read_csv(data_path, sep='\t', encoding='utf-8')
+        # remove dupliactes of same post text and same person ID
+        df.drop_duplicates(subset=['text', 'username'], keep='first', inplace=True)
+        # remove urls from the tweet's text
+        df['text'].replace(to_replace=r'(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]*)([\/\w\.-]*)*\/?\S', value='',
+                           regex=True,
+                           inplace=True)
+        for index, row in df.iterrows():  # append all tweets to each user
+            tweet_text = row['text']
+            tweets_per_user[row['username']].append(tweet_text)
+            all_tweets.append(tweet_text)
+
+        # for user, tweets in tweets_per_user.items():  # extract all corpora of the different users to a list
+        #     # users_list.append(user)
+        #     current_user_tweets = ''
+        #     for tweet in tweets:
+        #         current_user_tweets += tweet + '\n'
+        #     corpora.append(current_user_tweets)
+
+        with open("/sise/home/tommarz/parler-hate-speech/data/parler_sampled_users_comments_dict.p", "rb") as f:
+            mentions_dict = pickle.load(f)
+
+        with open("/sise/home/tommarz/parler-hate-speech/data/parler_sampled_users_echos_dict.p", "rb") as f:
+            retweets_dict = pickle.load(f)
+
+    elif file_type == 'csv':  # todo: support the sayiqan data as well
         df = pd.read_csv(data_path)
         # remove dupliactes of same post text and same person ID
         df.drop_duplicates(subset=['PostText', 'PersonID'], keep='first', inplace=True)
@@ -295,19 +327,23 @@ def extract_data_from_tweets(data_path, ignore_rt, ignore_punct, base_path):
     # retweets
     retweet_dict_to_df = {}
     i = 0
+    # print(len(retweets_dict))
     for user_id, mentioned_user in retweets_dict.items():
         for mentioned_user_id, texts in mentioned_user.items():
-            retweet_dict_to_df[i] = {'source': user_id, 'dest': mentioned_user_id, 'weight': len(texts)}
-            i += 1
-
+            retweet_dict_to_df[i] = {'source': user_id, 'dest': mentioned_user_id,
+                                     'weight': texts if 'parler' in data_path else len(texts)}
+        i += 1
+    # print(i)
     # mentions
     mention_dict_to_df = {}
     i = 0
     for user_id, mentioned_user in mentions_dict.items():
         for mentioned_user_id, texts in mentioned_user.items():
-            mention_dict_to_df[i] = {'source': user_id, 'dest': mentioned_user_id, 'weight': len(texts)}
+            mention_dict_to_df[i] = {'source': user_id, 'dest': mentioned_user_id,
+                                     'weight': texts if 'parler' in data_path else len(texts)}
             i += 1
-    if file_type != 'json':
+    # print(i)
+    if file_type != 'json' and 'parler' not in data_path:
         in_reply_to_edges = pd.DataFrame.from_dict(in_reply_to_dict_to_df, orient="index")
         in_reply_to_edges.to_csv(os.path.join(edges_dir_path, "in_reply_to_edges_df.tsv"), sep='\t', index=False)
     retweet_edges = pd.DataFrame.from_dict(retweet_dict_to_df, orient="index")
@@ -318,7 +354,6 @@ def extract_data_from_tweets(data_path, ignore_rt, ignore_punct, base_path):
 
     retweet_edges.to_csv(os.path.join(edges_dir_path, "retweet_edges_df.tsv"), sep='\t', index=False)
     mention_edges.to_csv(os.path.join(edges_dir_path, "mention_edges_df.tsv"), sep='\t', index=False)
-
 
     pickled_edges_dir_path = os.path.join(base_path, "pickled_data", "edges")
     create_dir_if_missing(pickled_edges_dir_path)
@@ -341,11 +376,13 @@ def extract_data_from_tweets(data_path, ignore_rt, ignore_punct, base_path):
 
     data_users_mentions_df = mention_edges[mention_edges['dest'].isin(users_list)].reset_index(drop=True)
     data_users_retweet_df = retweet_edges[retweet_edges['dest'].isin(users_list)].reset_index(drop=True)
-    if file_type != 'json':
+    if file_type != 'json' and 'parler' not in data_path:
         data_users_in_reply_to_df = in_reply_to_edges[in_reply_to_edges['dest'].isin(users_list)].reset_index(drop=True)
-        data_users_in_reply_to_df.to_csv(os.path.join(edges_dir_path, "data_users_in_reply_to_edges_df.tsv"), sep='\t', index=False)
+        data_users_in_reply_to_df.to_csv(os.path.join(edges_dir_path, "data_users_in_reply_to_edges_df.tsv"), sep='\t',
+                                         index=False)
 
-    data_users_mentions_df.to_csv(os.path.join(edges_dir_path, "data_users_mention_edges_df.tsv"), sep='\t', index=False)
+    data_users_mentions_df.to_csv(os.path.join(edges_dir_path, "data_users_mention_edges_df.tsv"), sep='\t',
+                                  index=False)
     data_users_retweet_df.to_csv(os.path.join(edges_dir_path, "data_users_retweet_edges_df.tsv"), sep='\t', index=False)
 
     users_df = pd.DataFrame(np.array(users_list), columns=['user_id'])
@@ -363,9 +400,8 @@ def extract_data_from_tweets(data_path, ignore_rt, ignore_punct, base_path):
     with open(f"{os.path.join(base_path, 'pickled_data', 'all_tweets.pkl')}", 'wb') as f:
         pickle.dump(all_tweets, f)
 
-
-
     # return users_df, corpora, tweets_per_user, users_corpora
+
 
 def get_all_echo_tweets(path):
     all_tweets = []
@@ -392,8 +428,8 @@ def get_all_echo_tweets(path):
                         # splitted_text = text.split(' ')
                         # words_to_remove = []
                         # for word in splitted_text:
-                            # if word.startswith('@') or word == 'RT':  # remove mentions and rt if exists
-                            #     words_to_remove.append(word)
+                        # if word.startswith('@') or word == 'RT':  # remove mentions and rt if exists
+                        #     words_to_remove.append(word)
                         # for word_to_remove in words_to_remove:
                         #     splitted_text.remove(word_to_remove)
                         # text = ' '.join(splitted_text)
@@ -402,6 +438,7 @@ def get_all_echo_tweets(path):
     with open('hate_networks/Echo networks/all_tweets_list_1-10-19.pkl', 'wb') as f:
         pickle.dump(all_tweets, f)
     return all_tweets
+
 
 def distinct_tweets_and_users_languages(path=None):
     '''
@@ -431,13 +468,13 @@ def distinct_tweets_and_users_languages(path=None):
                         users_dict[lookup(json, 'user.id')] = user_lang
                 zf.close()
 
-
     with open("hate_networks/Echo networks/tweets_lang_dict.pkl", "wb") as f:
         pickle.dump(tweets_per_language, f)
     with open("hate_networks/Echo networks/users_lang_dict.pkl", "wb") as f:
         pickle.dump(users_dict, f)
 
     return tweets_per_language, users_dict
+
 
 def get_start_end_dates(path):
     print("Started time start end")
@@ -481,6 +518,7 @@ def get_start_end_dates(path):
     print(min_date)
     print(max_date)
 
+
 def create_network_edges(base_path):
     # edges_dir_path = os.path.join(base_path, "network_edges")
     # create_dir_if_missing(edges_dir_path)
@@ -504,12 +542,14 @@ def create_network_edges(base_path):
                     for line in zf:
                         pass
 
-
     print("Before creating dfs")
 
+
 def get_famous_antisemites():
-    fam_user_handles = ['RichardBSpencer','Cernovich','DrDavidDuke','ExIronMarch','AndrewAnglinPhD','dailystormer','ThaRightStuff', 'GoyimGoddess', 'm_enoch']
-    fam_user_ids = ['402181258','358545917','72931184','1192567241482678272','357512807','709943695','1014432451', '754987972127186946', '324429651']
+    fam_user_handles = ['RichardBSpencer', 'Cernovich', 'DrDavidDuke', 'ExIronMarch', 'AndrewAnglinPhD', 'dailystormer',
+                        'ThaRightStuff', 'GoyimGoddess', 'm_enoch']
+    fam_user_ids = ['402181258', '358545917', '72931184', '1192567241482678272', '357512807', '709943695', '1014432451',
+                    '754987972127186946', '324429651']
     mention_edges = pd.DataFrame(columns=['source', 'dest', 'weight'])
     retweet_edges = pd.DataFrame(columns=['source', 'dest', 'weight'])
     in_reply_to_edges = pd.DataFrame(columns=['source', 'dest', 'weight'])
@@ -545,7 +585,8 @@ def get_famous_antisemites():
                         user_mentioned_id = lookup(json, 'in_reply_to_user_id_str')
                         if user_mentioned_id != None:
                             in_reply_to_screen_name = lookup(json, 'in_reply_to_screen_name')
-                            if (user_mentioned_id in fam_user_ids or in_reply_to_screen_name in fam_user_handles) and user_id != user_mentioned_id:  # self mentioning handling
+                            if (
+                                    user_mentioned_id in fam_user_ids or in_reply_to_screen_name in fam_user_handles) and user_id != user_mentioned_id:  # self mentioning handling
                                 if user_mentioned_id not in in_reply_to_dict[user_id].keys():
                                     in_reply_to_dict[user_id][user_mentioned_id] = []
                                 in_reply_to_dict[user_id][user_mentioned_id].append(text)
@@ -554,7 +595,8 @@ def get_famous_antisemites():
                         if 'retweeted_status' in json.keys():
                             user_mentioned_id = lookup(json, 'retweeted_status.user.id_str')
                             user_mentioned_screen_name = lookup(json, 'retweeted_status.user.screen_name')
-                            if (user_mentioned_id in fam_user_ids or user_mentioned_screen_name in fam_user_handles) and user_id != user_mentioned_id:  # self mentioning handling
+                            if (
+                                    user_mentioned_id in fam_user_ids or user_mentioned_screen_name in fam_user_handles) and user_id != user_mentioned_id:  # self mentioning handling
                                 if user_mentioned_id not in retweets_dict[user_id].keys():
                                     retweets_dict[user_id][user_mentioned_id] = []
                                 retweets_dict[user_id][user_mentioned_id].append(text)
@@ -563,7 +605,8 @@ def get_famous_antisemites():
                         for user_mentioned in user_mentions:
                             user_mentioned_id = lookup(user_mentioned, 'id_str')
                             user_mentioned_screen_name = lookup(user_mentioned, 'screen_name')
-                            if (user_mentioned_id in fam_user_ids or user_mentioned_screen_name in fam_user_handles) and user_id != user_mentioned_id:  # self mentioning handling
+                            if (
+                                    user_mentioned_id in fam_user_ids or user_mentioned_screen_name in fam_user_handles) and user_id != user_mentioned_id:  # self mentioning handling
                                 if user_mentioned_id not in mentions_dict[user_id].keys():
                                     mentions_dict[user_id][user_mentioned_id] = []
                                 mentions_dict[user_id][user_mentioned_id].append(text)
@@ -587,15 +630,19 @@ def get_famous_antisemites():
             mention_edges = mention_edges.append(
                 {'source': user_id, 'dest': mentioned_user_id, 'weight': len(texts), 'texts': texts}, ignore_index=True)
 
-    mention_edges.to_csv('hate_networks/Echo networks/Edges/famous_antisemite/mention_edges_with_text_df_.csv', index=False)
-    in_reply_to_edges.to_csv('hate_networks/Echo networks/Edges/famous_antisemite/in_reply_to_edges_with_text_df_.csv', index=False)
-    retweet_edges.to_csv('hate_networks/Echo networks/Edges/famous_antisemite/retweet_edges_with_text_df_.csv', index=False)
+    mention_edges.to_csv('hate_networks/Echo networks/Edges/famous_antisemite/mention_edges_with_text_df_.csv',
+                         index=False)
+    in_reply_to_edges.to_csv('hate_networks/Echo networks/Edges/famous_antisemite/in_reply_to_edges_with_text_df_.csv',
+                             index=False)
+    retweet_edges.to_csv('hate_networks/Echo networks/Edges/famous_antisemite/retweet_edges_with_text_df_.csv',
+                         index=False)
     with open('hate_networks/Echo networks/Edges/famous_antisemite/in_reply_to_dict_with_text_df_.pkl', "wb") as fout:
         pickle.dump(in_reply_to_dict, fout)
     with open('hate_networks/Echo networks/Edges/famous_antisemite/mentions_dict_with_text_df_.pkl', "wb") as fout:
         pickle.dump(mentions_dict, fout)
     with open('hate_networks/Echo networks/Edges/famous_antisemite/retweets_dict_with_text_df_.pkl', "wb") as fout:
         pickle.dump(retweets_dict, fout)
+
 
 def get_users_statistics():
     # labeled_df = pd.read_csv("./hate_networks/Echo networks/csv_data/users_labeled.csv")
@@ -620,15 +667,19 @@ def get_users_statistics():
                         user = lookup(json, 'user')
                         user_id = lookup(user, 'id_str')
                         if user_id not in users_data.keys():
-                            users_data[user_id] = {"tweet_count": 0, "created_at": datetime.strptime(user["created_at"], '%a %b %d %H:%M:%S +0000 %Y'),
+                            users_data[user_id] = {"tweet_count": 0, "created_at": datetime.strptime(user["created_at"],
+                                                                                                     '%a %b %d %H:%M:%S +0000 %Y'),
                                                    "twitter_age": 0, "tweets_per_day": -1,
-                                               "last_tweet_date":datetime.strptime('Mon Jun 8 10:51:32 +0000 2001', '%a %b %d %H:%M:%S +0000 %Y'),
-                                               "last_tweet_obj": None, "statuses_count": -1, "friends_count": -1, "followers_count": -1, "replies": 0, "retweets": 0, "mentions": 0, "all_mentions": 0}
+                                                   "last_tweet_date": datetime.strptime('Mon Jun 8 10:51:32 +0000 2001',
+                                                                                        '%a %b %d %H:%M:%S +0000 %Y'),
+                                                   "last_tweet_obj": None, "statuses_count": -1, "friends_count": -1,
+                                                   "followers_count": -1, "replies": 0, "retweets": 0, "mentions": 0,
+                                                   "all_mentions": 0}
                         created_at = lookup(json, 'created_at')
                         dt = datetime.strptime(created_at, '%a %b %d %H:%M:%S +0000 %Y')
                         if dt > max_date:
                             max_date = dt
-                        if dt > users_data[user_id]["last_tweet_date"]: # need to update last tweet obj
+                        if dt > users_data[user_id]["last_tweet_date"]:  # need to update last tweet obj
                             users_data[user_id]["last_tweet_date"] = dt
                             users_data[user_id]["last_tweet_obj"] = json
                         users_data[user_id]["tweet_count"] += 1
@@ -648,18 +699,24 @@ def get_users_statistics():
         users_data[user_id]["friends_count"] = users_data[user_id]["last_tweet_obj"]["user"]["friends_count"]
         users_data[user_id]["followers_count"] = users_data[user_id]["last_tweet_obj"]["user"]["followers_count"]
         users_data[user_id]["statuses_count"] = users_data[user_id]["last_tweet_obj"]["user"]["statuses_count"]
-        users_data[user_id]["tweets_per_day"] = users_data[user_id]["statuses_count"] / users_data[user_id]["twitter_age"]
+        users_data[user_id]["tweets_per_day"] = users_data[user_id]["statuses_count"] / users_data[user_id][
+            "twitter_age"]
     with open("./hate_networks/Echo networks/pickled_data/users_statistics.pkl", "wb") as fout:
         pickle.dump(users_data, fout)
+
 
 def get_users_hashtags_and_words():
     users_hashtags = defaultdict(dict)
     users_search_words = defaultdict(dict)
     users_hashtag_counts = defaultdict(int)
-    search_words = ['muslim', 'arab', 'nazi', 'immigrant', 'immigration', 'woman', 'parasite', 'israel', 'zionist', 'zionism', 'pedophile', 'fake', 'fakenews',
-                    'fake news', 'fuck', 'shit', 'white', 'black', 'genocide', 'white genocide', 'hitler', 'hh', 'war', 'hate', 'european', 'kike', 'skype',
-                    'skittle', 'propaganda', 'media', 'mainstream', 'hate', 'vaccine', 'vaccines', 'vaccination', 'cunt', 'whore',
-                    'pussy', 'snowflake', 'commie', 'cuck', 'hillary', 'clinton', 'obama', 'trump', '@realdonaldtrump', '@hillaryclinton']
+    search_words = ['muslim', 'arab', 'nazi', 'immigrant', 'immigration', 'woman', 'parasite', 'israel', 'zionist',
+                    'zionism', 'pedophile', 'fake', 'fakenews',
+                    'fake news', 'fuck', 'shit', 'white', 'black', 'genocide', 'white genocide', 'hitler', 'hh', 'war',
+                    'hate', 'european', 'kike', 'skype',
+                    'skittle', 'propaganda', 'media', 'mainstream', 'hate', 'vaccine', 'vaccines', 'vaccination',
+                    'cunt', 'whore',
+                    'pussy', 'snowflake', 'commie', 'cuck', 'hillary', 'clinton', 'obama', 'trump', '@realdonaldtrump',
+                    '@hillaryclinton']
     with zipfile.ZipFile("/data/home/eyalar/antisemite_hashtags/Resources/recent_history.zip", "r") as zfile:
         for name in tqdm(zfile.namelist()):
             # We have a zip within a zip
