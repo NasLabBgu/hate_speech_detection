@@ -13,6 +13,7 @@ from config.hate_networks_config import path_conf
 import logging
 logger = logging.getLogger(__name__)
 
+
 def get_tweets_per_user_echo_data():
     tweets_per_user = defaultdict(list)
     tweets_per_user_no_RT = defaultdict(list)
@@ -22,7 +23,7 @@ def get_tweets_per_user_echo_data():
     with zipfile.ZipFile(path_conf["echo"]["raw_data"], "r") as zfile:
         for name in tqdm(zfile.namelist()):
             # We have a zip within a zip
-            name = '1368291252.json.gz'
+            # name = '1368291252.json.gz'
             if re.search('\.gz$', name) != None:
                 zfiledata = BytesIO(zfile.read(name))
                 with gzip.open(zfiledata) as zf:

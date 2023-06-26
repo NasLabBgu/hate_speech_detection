@@ -61,9 +61,9 @@ path_conf = {
         "base_output": "./hate_networks/outputs/gab_networks"
     },
     "parler": {
-        "raw_data": "/sise/home/tommarz/parler-hate-speech/data/parler_sampled_posts.tsv",
-        "mentions": "/sise/home/tommarz/parler-hate-speech/data/parler_sampled_users_comments_dict.p",
-        "echos": "/sise/home/tommarz/parler-hate-speech/data/parler_sampled_users_echos_dict.p",
+        "raw_data": "/sise/home/tommarz/parler-hate-speech/data/parler_annotated_users_posts.tsv",
+        "mentions": "/sise/home/tommarz/parler-hate-speech/data/parler_users_comments_dict.p",
+        "echos": "/sise/home/tommarz/parler-hate-speech/data/parler_users_echos_dict.p",
         # "followers_data": "/sise/Yalla_work/data/hate_speech/gab/data/followers_2018_02_01.json",
         # "followings_data": "/sise/Yalla_work/data/hate_speech/gab/data/followings_2018_02_01.json",
         "base_output": "./hate_networks/outputs/parler_networks"

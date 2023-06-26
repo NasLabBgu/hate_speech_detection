@@ -6,14 +6,14 @@ post_level_execution_config = {
     # set multiple_experiments to False when running post_level__experiment.py file.
     # set multiple_experiments to True when running the file post_level__multiple_experiments.py.
     "data": {
-        "dataset": "parler",  # possible values: ["echo_2", "gab, "parler"]
+        "dataset": "echo_2",  # possible values: ["echo_2", "gab, "parler"]
         'test_size': 0.2
     },
     "train_on_all_data": False,
     "keep_all_data": True,
     "omit_echo": False,
     # relevant only if keep_al_data is set to false. if omit_echo is true - then we keep only posts without echo, and vice versa.
-    "model": "models.CNN_LSTM",  # choose the model to run
+    "model": "models.BertFineTuning",  # choose the model to run
     # possible model values: ["AttentionLSTM", "CNN_LSTM", "BertFineTuning", "FeedForwardNN", "MyLogisticRegression",
     #                         "MyCatboost", "MyLightGBM", "MyXGBoost"]
     "bert_conf": {  # relevant only for "BertFineTuning" model
@@ -34,20 +34,20 @@ post_level_execution_config = {
         "max_features": 10000  # applicable only for non-bert models
     },
     "kwargs": {
-        "model_name": "",
-        "max_seq_len": 128, # Gab # 64 # Gab dataset has max_seq_len of 64
-        "emb_size":  300, # 64 Gab # 300 # Gab dataset has emb_size of 300
+        "model_name": "BertFineTuning",
+        "max_seq_len": 128,  # For echo_2 256
+        "emb_size": 300,  # 64 Gab # 300 # Gab dataset has emb_size of 300
         "epochs": 20,
         "fine_tune": True,
         "validation_split": 0.2,
         "model_api": "functional",
-        'dense_units': 4, # 4, Gab
-        'bs': 32,
+        'dense_units': 16,  # 4, Gab
+        'bs': 8,
         "paths": {
             "train_output": "detection/outputs/",
             "model_output": "detection/outputs/"
         },
-        "weights_only": False
+        "weights_only": True
     },
     "evaluation": {
         "metrics": [
@@ -61,8 +61,8 @@ post_level_execution_config = {
 
 # user level execution config
 user_level_execution_config = {
-    "trained_data": "parler",  # possible values: ["echo_2", "gab, "parler"]
-    "inference_data": "parler",  # possible values: ["echo_2", "gab, "parler"]
+    "trained_data": "echo_2",  # possible values: ["echo_2", "gab, "parler"]
+    "inference_data": "echo_2",  # possible values: ["echo_2", "gab, "parler"]
 }
 
 # configs specific to posts with/wo the echo sign
@@ -174,7 +174,7 @@ post_level_conf = {
         "labels_interpretation": ["Not-HS", "HS"]
     },
     "parler": {
-        "data_path": "/sise/home/tommarz/parler-hate-speech/parler_posts_2_labels.tsv",
+        "data_path": "data/post_level/parler_posts_2_labels.tsv",
         # "data/post_level/parler_posts_2_labels.tsv",
         "text_column": "text",
         "label_column": "label",
@@ -216,7 +216,7 @@ user_level_conf = {
         "label_column": "label",
         "labels": [0, 1],
         "labels_interpretation": ["Not-HM", "HM"],
-        "posts_per_user_path": "hate_networks/outputs/parler_networks/pickled_data/corpora_list_per_user.pkl"
+        "posts_per_user_path": "/sise/Yalla_work/data/parler/gnn/users_posts_list.p"
     }
 }
 

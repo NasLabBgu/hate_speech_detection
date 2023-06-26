@@ -104,13 +104,14 @@ class NeuralNetworkModel(BaseModel):
                                                               stratify=y_train)
             validation_data = (X_val, y_val)
             validation_split = 0.0
-        model_weights_file_path = os.path.join(model_output_path, "model_best.h5")
+        model_weights_file_path = os.path.join(model_output_path, "weights_best.h5")
+        model_file_path = os.path.join(model_output_path, "model_best.h5")
         # model_file_path = os.path.join(model_output_path, "model.h5")
         # full_model_file_path = os.path.join(model_output_path, "full_model.pkl")
         checkpoint = ModelCheckpoint(model_weights_file_path, monitor='val_loss', verbose=2, save_best_only=True,
                                      mode='min', save_weights_only=True)
 
-        if self.name == 'BertFineTuning1':
+        if self.name == 'BertFineTuning':
             reduce_lr = self.create_learning_rate_scheduler(max_learn_rate=1e-5,
                                                             end_learn_rate=1e-7,
                                                             warmup_epoch_count=20,

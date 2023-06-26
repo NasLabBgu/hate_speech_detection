@@ -144,10 +144,10 @@ def extract_data_from_tweets(data_path, ignore_rt, ignore_punct, base_path):
         #         current_user_tweets += tweet + '\n'
         #     corpora.append(current_user_tweets)
 
-        with open("/sise/home/tommarz/parler-hate-speech/data/parler_sampled_users_comments_dict.p", "rb") as f:
+        with open("/sise/home/tommarz/parler-hate-speech/data/parler_users_comments_dict.p", "rb") as f:
             mentions_dict = pickle.load(f)
 
-        with open("/sise/home/tommarz/parler-hate-speech/data/parler_sampled_users_echos_dict.p", "rb") as f:
+        with open("/sise/home/tommarz/parler-hate-speech/data/parler_users_echos_dict.p", "rb") as f:
             retweets_dict = pickle.load(f)
 
     elif file_type == 'csv':  # todo: support the sayiqan data as well

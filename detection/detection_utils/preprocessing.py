@@ -10,11 +10,42 @@ from sklearn.model_selection import train_test_split
 import transformers
 from utils.constants import URL_RE, RT_RE
 import logging
+
 logger = logging.getLogger(__name__)
+from sklearn.preprocessing import FunctionTransformer
+
+
+class HateSpeechCountTransformer(FunctionTransformer):
+    def __init__(self, post_threshold=0.5):
+        super().__init__()
+        self.post_threshold = post_threshold
+        self.f = np.vectorize(lambda p: np.sum(p >= self.post_threshold))
+        # self.feature_names_out = lambda self, input_features: ['hs_count']
+        # self.feature_names_out = 'one_to_one'
+
+    def transform(self, X):
+        return self.f(X).reshape(-1, 1)
+
+
+#     def fit_transform(self, X):
+#         return self.transform(X)
+
+
+class MeanHateSpeechProbaTransformer(FunctionTransformer):
+    def __init__(self):
+        super().__init__()
+        self.f = np.vectorize(lambda p: p.mean())
+        # self.feature_names_out = lambda self, input_features: ['mean_hs']
+        # self.feature_names_out = 'one_to_one'
+
+    def transform(self, X, y=None):
+        return self.f(X).reshape(-1, 1)
+
 
 class PreprocessText():
-    def __init__(self, max_features, max_seq_len: int=128, bert_conf: dict=None, preprocess_type: str='bert', output_path: str=None,
-                 test_size: float=0.20):
+    def __init__(self, max_features, max_seq_len: int = 128, bert_conf: dict = None, preprocess_type: str = 'bert',
+                 output_path: str = None,
+                 test_size: float = 0.20):
         self.max_features = max_features
         self.max_seq_len = max_seq_len
         self.bert_conf = bert_conf
@@ -40,6 +71,7 @@ class PreprocessText():
         tokenizer.fit_on_texts(texts)
         self.tokenizer = tokenizer
         self.vocab_size = len(self.tokenizer.word_index) + 1
+
     def transform_tokenizer(self, texts):
         """
         important: oov tokens will be considered as 1
@@ -58,7 +90,7 @@ class PreprocessText():
                 # vectorizer = sklearn.feature_extraction.text.CountVectorizer(
                 analyzer='word',
                 tokenizer=functools.partial(tokenize, normalization_type=normalization_type),
-                #preprocessor=strip_hashtags,
+                # preprocessor=strip_hashtags,
                 ngram_range=(1, 1),
                 stop_words=stopwords,  # We do better when we keep stopwords
                 decode_error='replace',
@@ -92,7 +124,7 @@ class PreprocessText():
         # todo: CHANGE THIS TO SUPPORT NEW VOCABULARY ?
         bert_type = self.bert_conf['model_type']
         use_masking = self.bert_conf['use_masking']
-        use_token_types = False  #self.bert_conf['use_token_types']
+        use_token_types = False  # self.bert_conf['use_token_types']
         if training:
             do_lower_case = False
             if 'uncased' in bert_type:
@@ -112,8 +144,9 @@ class PreprocessText():
             self.tokenizer = bert_tokenizer
 
         input_dict = self.tokenizer.batch_encode_plus(X, add_special_tokens=True, max_length=self.max_seq_len,
-                                   truncation_strategy='longest_first', pad_to_max_length=True,
-                                   return_attention_mask=use_masking, return_token_type_ids=use_token_types)
+                                                      truncation_strategy='longest_first', pad_to_max_length=True,
+                                                      return_attention_mask=use_masking,
+                                                      return_token_type_ids=use_token_types)
 
         input_ids = input_dict['input_ids']
 
@@ -146,7 +179,8 @@ class PreprocessText():
         # split to train and test
         if mode == 'split':
 
-            X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=self.test_size, random_state=42)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, stratify=y, test_size=self.test_size,
+                                                                random_state=42)
             X_train_as_text = X_train.copy()
             X_test_as_text = X_test.copy()
 

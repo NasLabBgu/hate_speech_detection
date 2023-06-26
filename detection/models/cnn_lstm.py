@@ -59,13 +59,13 @@ class CNN_LSTM(NeuralNetworkModel):
         if self.model_api == "functional":
             INPUT = Input(shape=(self.max_seq_len,))
             EMB = emb_layer(INPUT)
-            CNV1D = Conv1D(filters=64, kernel_size=5, padding='same', activation='relu', name="conv-1d")(EMB)
-            DROPOUT = Dropout(0.2, name='dropout-1')(CNV1D)
+            CNV1D = Conv1D(filters=128, kernel_size=7, padding='same', activation='relu', name="conv-1d")(EMB)
+            DROPOUT = Dropout(0.4, name='dropout-1')(CNV1D)
             MAXPOOL1D = MaxPooling1D(pool_size=5)(DROPOUT)
             LSTM_LAYER = LSTM(units=64, return_sequences=True)(MAXPOOL1D)
             GLOBALMAXPOOL1D = GlobalAvgPool1D()(LSTM_LAYER)
             DENSE = Dense(self.dense_units, activation='tanh')(GLOBALMAXPOOL1D)
-            DROPOUT = Dropout(0.2, name='dropout-2')(DENSE)
+            DROPOUT = Dropout(0.3, name='dropout-2')(DENSE)
             OUTPUT = output_layer(DROPOUT)
             model = Model(inputs=INPUT, outputs=OUTPUT, name="cnn_lstm")
 

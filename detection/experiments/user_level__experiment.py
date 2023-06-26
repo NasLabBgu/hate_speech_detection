@@ -63,11 +63,32 @@ def load_post_model(**post_level_kwargs):
     else:
         model_weights_file_path = os.path.join(post_level_kwargs["kwargs"]["paths"]["model_output"], "model_best.h5")
 
-        model.model = load_model(model_weights_file_path, custom_objects={'f1_m': f1_m, 'AttentionWithContext': AttentionWithContext})
+        model.model = load_model(model_weights_file_path,
+                                 custom_objects={'f1_m': f1_m, 'AttentionWithContext': AttentionWithContext})
     # model = load_model(os.path.join(model_path, "saved_model/model.h5"),
     #                custom_objects={'AttentionWithContext': AttentionWithContext, 'GlorotUniform': glorot_uniform()})
     print(model.model.summary())
     return pt, model
+
+
+def predict_df(trained_dataset_name, inference_dataset_name, df):
+    logger.info(
+        f"predicting all users for dataset: {inference_dataset_name} using models train on {trained_dataset_name} data")
+    logger.info(f"predicting all users for dataset: {inference_dataset_name}")
+    post_level_data_conf = post_level_conf[trained_dataset_name]
+    labels = post_level_data_conf["labels"]
+    labels_interpretation = post_level_data_conf["labels_interpretation"]
+    post_level_execution_config["kwargs"]["labels"] = labels
+    post_level_execution_config["kwargs"]["labels_interpretation"] = labels_interpretation
+
+    pt, post_model = load_post_model(**post_level_execution_config)
+
+    _, X_test, _, _, _, _ = pt.full_preprocessing(df['text'], None, mode='test')
+    # logger.info(f"predicting users tweets; indices: {user_range} to {user_range + chunk_size - 1}...")
+    y_proba = post_model.predict_proba(X_test)
+    # y_proba = post_model.predict(X_test)
+
+    return y_proba
 
 
 def predict_all_users(trained_dataset_name, inference_dataset_name, user_level_path):
@@ -86,9 +107,10 @@ def predict_all_users(trained_dataset_name, inference_dataset_name, user_level_p
     # if os.path.exists(os.path.join(user_level_path, "X_test.pkl")):
     #     X_test = pickle.load(open(os.path.join(user_level_path, "X_test.pkl"), "rb"))
     # else:
-    if not os.path.exists(os.path.join(user_level_path, "all_users_tweets.parquet")):
+    if not os.path.exists(os.path.join(user_level_path, "ego_network_users_tweets.parquet")):
         logger.info(f"reading all posts of {inference_dataset_name} dataset...")
-        posts_per_user_dict = pickle.load(open(user_level_conf[inference_dataset_name]["posts_per_user_path"], "rb"))
+        posts_per_user_dict = pickle.load(
+            open(user_level_conf[inference_dataset_name]["posts_per_user_path"], "rb"))
         for k, v in posts_per_user_dict.items():
             posts_per_user_dict[k] = [p.strip() for p in v if p.strip() != '']  # omit empty posts
         logger.info(f"finished reading all posts of {inference_dataset_name} dataset")
@@ -117,7 +139,7 @@ def predict_all_users(trained_dataset_name, inference_dataset_name, user_level_p
     else:  # tweets per user df already exists
         logger.info("reading all_users_tweets.parquet file...")
 
-        full_df = pd.read_parquet(os.path.join(user_level_path, "all_users_tweets.parquet"))
+        full_df = pd.read_parquet(os.path.join(user_level_path, "ego_network_users_tweets.parquet"))
         logger.info(f"full_df shape: {full_df.shape}")
         full_df = full_df[full_df["text"].apply(lambda t: t.strip() != "")].reset_index(drop=True)
         # first_10000_users = list(full_df["user_id"].unique())[:10000]
@@ -126,33 +148,32 @@ def predict_all_users(trained_dataset_name, inference_dataset_name, user_level_p
         logger.info("file read.")
 
     # SPLITTING TO CHUNKS BY TWEETS
-    chunk_size = 1000000
+    chunk_size = np.minimum(10000000, len(full_df))
     logger.info(f"preprocessing in chunks of {chunk_size}...")
     logger.info(f"Length of full_df: {len(full_df)}")
-    for user_range in range(0, len(full_df), chunk_size):
-        if user_range > 3 * chunk_size:
-            current_full_df = full_df.loc[user_range:user_range + chunk_size - 1]
-            current_X = current_full_df["text"]
+    for user_range in tqdm(range(0, len(full_df), chunk_size)):
+        current_full_df = full_df.loc[user_range:user_range + chunk_size - 1]
+        current_X = current_full_df["text"]
 
-            _, X_test, _, _, _, _ = pt.full_preprocessing(current_X, None, mode='test')
-            logger.info(f"predicting users tweets; indices: {user_range} to {user_range + chunk_size - 1}...")
-            y_proba = post_model.predict_proba(X_test)
-            # y_proba = post_model.predict(X_test)
-            current_full_df.loc[:, 'predictions'] = y_proba
+        _, X_test, _, _, _, _ = pt.full_preprocessing(current_X, None, mode='test')
+        logger.info(f"predicting users tweets; indices: {user_range} to {user_range + chunk_size - 1}...")
+        y_proba = post_model.predict_proba(X_test)
+        # y_proba = post_model.predict(X_test)
+        current_full_df.loc[:, 'predictions'] = y_proba
 
-            create_dir_if_missing(os.path.join(user_level_path, "split_by_posts"))
-            create_dir_if_missing(os.path.join(user_level_path, "split_by_posts", "no_text"))
-            create_dir_if_missing(os.path.join(user_level_path, "split_by_posts", "with_text"))
-            logger.info(f"saving predictions to {user_level_path}")
+        create_dir_if_missing(os.path.join(user_level_path, "split_by_posts"))
+        create_dir_if_missing(os.path.join(user_level_path, "split_by_posts", "no_text"))
+        create_dir_if_missing(os.path.join(user_level_path, "split_by_posts", "with_text"))
+        logger.info(f"saving predictions to {user_level_path}")
 
-            current_full_df[['user_id', 'predictions']].to_parquet(
-                os.path.join(user_level_path, "split_by_posts", "no_text",
-                             f"user2pred_min_idx_{user_range}_max_idx_{user_range + chunk_size - 1}.parquet"),
-                index=False)
+        current_full_df[['user_id', 'predictions']].to_parquet(
+            os.path.join(user_level_path, "split_by_posts", "no_text",
+                         f"user2pred_min_idx_{user_range}_max_idx_{user_range + chunk_size - 1}.parquet"),
+            index=False)
 
-            current_full_df.to_parquet(os.path.join(user_level_path, "split_by_posts", "with_text",
-                                                    f"user2pred_with_text_min_idx_{user_range}_max_idx_{user_range + chunk_size - 1}.parquet"),
-                                       index=False)
+        current_full_df.to_parquet(os.path.join(user_level_path, "split_by_posts", "with_text",
+                                                f"user2pred_with_text_min_idx_{user_range}_max_idx_{user_range + chunk_size - 1}.parquet"),
+                                   index=False)
 
 
 def build_user_model(max_user_tweets: int, max_followings_num: int, max_followers_num: int, network_feautres_num: int,
@@ -531,8 +552,25 @@ def run_ulm_experiment():
     else:
         all_posts_probs_df_path = os.path.join(inference_path, "user2pred.parquet")
 
-    # if not os.path.exists(all_posts_probs_df_path):  # for the first time running this data - predict all posts for all users.
+    # if not os.path.exists(
+    #         all_posts_probs_df_path):  # for the first time running this data - predict all posts for all users.
     predict_all_users(trained_data, inference_data, inference_path)
+
+    # posts = [
+    #     '"Muslim terrorists did this and obama brought them here to run our government. Gotta get rid of Obammy, Omar and all these other fucking Muslims"',
+    #     '"is there a more debased creature in our modern pop-cultural cesspool than (((Amy Schumer)))? Probably not."',
+    #     '"We must secure the existence of our people and a future for white children!"',
+    #     '"If white people are going to continue  existing - we must support our race"',
+    #     '"When the youngest white generation becomes adult they will be 5\% of the world population, down from 1/3 in 1900"',
+    #     '"Did you know that most dog breeds were bred by whites? We’re awesome and they’re awesome!"',
+    #     '"White lives matter!"',
+    #     '"Blue lives matter!"'
+    # ]
+    # df = pd.DataFrame(posts, columns=['text'])
+    #
+    # y_proba = predict_df(trained_data, inference_data, df)
+    # print(y_proba)
+    # return
 
     io_path = os.path.join(inference_path, "io")
     create_dir_if_missing(io_path)
